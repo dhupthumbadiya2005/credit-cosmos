@@ -13,7 +13,21 @@ import {
   BarChart4,
   PieChart,
   AlertCircle,
+  Check,
+  X,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { 
+  PieChart as Pie, 
+  Pie as PieComponent, 
+  Cell, 
+  ResponsiveContainer 
+} from "recharts";
 
 interface ReportData {
   id: string;
