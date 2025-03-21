@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/lib/toast";
 import {
   Download,
   FileText,
@@ -15,14 +14,6 @@ import {
   PieChart,
   AlertCircle,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { PieChart as Pie } from "recharts";
-import { Pie as PieComponent, Cell, ResponsiveContainer } from "recharts";
 
 interface ReportData {
   id: string;
@@ -58,41 +49,36 @@ interface ReportData {
   insights: string[];
 }
 
-// Dummy data generator for report analysis
 const generateDummyReport = (reportId: string): ReportData => {
   const bureaus = ["Experian", "Equifax", "TransUnion", "CIBIL"];
   const colors = ["#3498db", "#2ecc71", "#9b59b6", "#e67e22"];
   const loanTypes = ["Personal Loan", "Mortgage", "Auto Loan", "Business Loan"];
   const documentTypes = ["Credit Report", "Bank Statement", "Income Proof"];
   
-  // Generate random scores for each bureau (680-830 range)
   const bureauScores = bureaus.map((bureau, index) => ({
     bureau,
     score: Math.floor(Math.random() * 150) + 680,
     color: colors[index],
   }));
   
-  // Calculate average score
   const avgScore = Math.floor(
     bureauScores.reduce((sum, b) => sum + b.score, 0) / bureauScores.length
   );
   
-  // Determine risk level based on average score
   let riskLevel: "Low" | "Medium" | "High";
   let riskScore: number;
   
   if (avgScore > 750) {
     riskLevel = "Low";
-    riskScore = Math.floor(Math.random() * 20) + 80; // 80-100
+    riskScore = Math.floor(Math.random() * 20) + 80;
   } else if (avgScore > 700) {
     riskLevel = "Medium";
-    riskScore = Math.floor(Math.random() * 30) + 50; // 50-80
+    riskScore = Math.floor(Math.random() * 30) + 50;
   } else {
     riskLevel = "High";
-    riskScore = Math.floor(Math.random() * 50); // 0-50
+    riskScore = Math.floor(Math.random() * 50);
   }
   
-  // Generate random date within last 30 days
   const date = new Date();
   date.setDate(date.getDate() - Math.floor(Math.random() * 30));
   const formattedDate = date.toISOString().split("T")[0];
@@ -107,7 +93,7 @@ const generateDummyReport = (reportId: string): ReportData => {
     documentType: documentTypes[Math.floor(Math.random() * documentTypes.length)],
     bureauScores,
     creditHistory: {
-      length: Math.floor(Math.random() * 120) + 24, // 2-12 years
+      length: Math.floor(Math.random() * 120) + 24,
       accounts: Math.floor(Math.random() * 10) + 2,
       latePayments: Math.floor(Math.random() * 4),
       derogatoryMarks: Math.floor(Math.random() * 2),
@@ -187,11 +173,9 @@ const ReportAnalysis: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>("overview");
   
   useEffect(() => {
-    // Simulate API call to fetch report data
     const fetchReportData = async () => {
       setIsLoading(true);
       try {
-        // In a real app, this would be an API call
         await new Promise((resolve) => setTimeout(resolve, 1500));
         const dummyReport = generateDummyReport(reportId);
         setReport(dummyReport);
@@ -242,14 +226,12 @@ const ReportAnalysis: React.FC = () => {
     );
   }
   
-  // Create chart data for bureau scores
   const bureauScoreData = report.bureauScores.map((bureau) => ({
     name: bureau.bureau,
     value: bureau.score,
     color: bureau.color,
   }));
   
-  // Calculate average score
   const avgScore = Math.floor(
     report.bureauScores.reduce((sum, bureau) => sum + bureau.score, 0) /
       report.bureauScores.length
@@ -333,7 +315,6 @@ const ReportAnalysis: React.FC = () => {
         </Button>
       </div>
       
-      {/* Quick Info Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card className="glass-card">
           <CardContent className="p-4 flex items-center space-x-4">
@@ -394,7 +375,6 @@ const ReportAnalysis: React.FC = () => {
         </Card>
       </div>
       
-      {/* Main Content Tabs */}
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid grid-cols-3 mb-6 mx-auto max-w-md">
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -402,7 +382,6 @@ const ReportAnalysis: React.FC = () => {
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
         
-        {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-6">
           <Card className="glass-card">
             <CardHeader className="pb-2">
@@ -597,7 +576,6 @@ const ReportAnalysis: React.FC = () => {
           </div>
         </TabsContent>
         
-        {/* Bureaus Tab */}
         <TabsContent value="bureaus" className="space-y-6">
           <Card className="glass-card overflow-hidden">
             <CardHeader className="pb-2">
@@ -696,7 +674,6 @@ const ReportAnalysis: React.FC = () => {
           </Card>
         </TabsContent>
         
-        {/* Insights Tab */}
         <TabsContent value="insights" className="space-y-6">
           <Card className="glass-card">
             <CardHeader>
@@ -759,3 +736,4 @@ const ReportAnalysis: React.FC = () => {
 };
 
 export default ReportAnalysis;
+

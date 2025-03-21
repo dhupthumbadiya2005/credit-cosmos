@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "@/lib/toast";
 import {
   FileText,
   Download,
@@ -14,27 +13,6 @@ import {
   Filter,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 
 interface Report {
   id: string;
@@ -46,7 +24,6 @@ interface Report {
   risk: "Low" | "Medium" | "High";
 }
 
-// Generate dummy reports
 const generateDummyReports = (): Report[] => {
   const statuses: Array<"Approved" | "Pending" | "Rejected"> = [
     "Approved",
@@ -78,13 +55,10 @@ const generateDummyReports = (): Report[] => {
     "Linda Garcia",
   ];
   
-  // Generate 20 dummy reports
   return Array.from({ length: 20 }, (_, i) => {
-    // Generate a date within the last 120 days
     const date = new Date();
     date.setDate(date.getDate() - Math.floor(Math.random() * 120));
     
-    // Randomly select 1-3 bureaus
     const selectedBureaus: string[] = [];
     const bureauCount = Math.floor(Math.random() * 3) + 1;
     while (selectedBureaus.length < bureauCount) {
@@ -119,11 +93,9 @@ const ReportHistory: React.FC = () => {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   
   useEffect(() => {
-    // Simulate API call to fetch reports
     const fetchReports = async () => {
       setIsLoading(true);
       try {
-        // In a real app, this would be an API call
         await new Promise((resolve) => setTimeout(resolve, 1000));
         const dummyReports = generateDummyReports();
         setReports(dummyReports);
@@ -139,11 +111,9 @@ const ReportHistory: React.FC = () => {
     fetchReports();
   }, []);
   
-  // Apply filters and search
   useEffect(() => {
     let result = [...reports];
     
-    // Apply search
     if (searchTerm) {
       result = result.filter(
         (report) =>
@@ -152,27 +122,23 @@ const ReportHistory: React.FC = () => {
       );
     }
     
-    // Apply date filter
     if (selectedDate) {
       const dateStr = selectedDate.toISOString().split("T")[0];
       result = result.filter((report) => report.date === dateStr);
     }
     
-    // Apply status filter
     if (statusFilter !== "all") {
       result = result.filter(
         (report) => report.status.toLowerCase() === statusFilter
       );
     }
     
-    // Apply risk filter
     if (riskFilter !== "all") {
       result = result.filter(
         (report) => report.risk.toLowerCase() === riskFilter
       );
     }
     
-    // Apply sorting
     result.sort((a, b) => {
       if (sortField === "date") {
         return sortDirection === "asc"
@@ -297,7 +263,6 @@ const ReportHistory: React.FC = () => {
         </Button>
       </div>
       
-      {/* Search and Filters */}
       <Card className="glass-card mb-6">
         <CardContent className="p-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -515,7 +480,6 @@ const ReportHistory: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Reports Table */}
       <Card className="glass-card overflow-hidden">
         <CardHeader className="p-0">
           <div className="overflow-x-auto">
