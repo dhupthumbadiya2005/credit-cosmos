@@ -2,12 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
-
-interface User {
-  id: string;
-  email: string;
-  organization: string;
-}
+import { supabase, User } from "@/lib/supabase";
 
 interface AuthContextType {
   user: User | null;
@@ -36,21 +31,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAuth = async (): Promise<boolean> => {
-    // Check if user session exists in localStorage
-    const storedUser = localStorage.getItem("user");
-    
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser) as User;
-        setUser(parsedUser);
-        return true;
-      } catch (error) {
-        console.error("Failed to parse user data:", error);
-        localStorage.removeItem("user");
-        setUser(null);
+    try {
+      // Check active session in Supabase
+      const { data, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        throw error;
       }
+      
+      if (data.session) {
+        // Get user profile from Supabase
+        const { data: userData, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        if (userData) {
+          setUser({
+            id: userData.id,
+            email: userData.email,
+            organization_name: userData.organization_name
+          });
+          return true;
+        }
+      }
+    } catch (error) {
+      console.error("Error checking auth status:", error);
     }
     
+    setUser(null);
     return false;
   };
 
@@ -58,35 +72,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Simulate API call to authenticate user
-      // This would be replaced with a real API call in production
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      // For demo purposes, any valid email format will work
-      if (!email.includes("@") || !password || !organization) {
-        throw new Error("Invalid credentials");
-      }
-      
-      // Mock successful login
-      const mockUser: User = {
-        id: "user-" + Math.random().toString(36).substr(2, 9),
+      // Sign in with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
-        organization,
-      };
-      
-      // Store user in localStorage
-      localStorage.setItem("user", JSON.stringify(mockUser));
-      
-      // Update context state
-      setUser(mockUser);
-      
-      // Show success toast
-      toast.success("Login successful", {
-        description: `Welcome back to CrediSphere, ${organization}!`,
+        password
       });
       
-      // Redirect to dashboard
-      navigate("/dashboard");
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        // Get user profile from Supabase
+        const { data: userData, error: profileError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        if (userData) {
+          setUser({
+            id: userData.id,
+            email: userData.email,
+            organization_name: userData.organization_name
+          });
+          
+          // Show success toast
+          toast.success("Login successful", {
+            description: `Welcome back to CrediSphere, ${userData.organization_name}!`,
+          });
+          
+          // Redirect to dashboard
+          navigate("/dashboard");
+        }
+      }
     } catch (error) {
       let message = "Login failed";
       
@@ -99,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Clear any stored data
-      localStorage.removeItem("user");
+      await supabase.auth.signOut();
       setUser(null);
     } finally {
       setIsLoading(false);
@@ -110,22 +133,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      // Simulate API call to register user
-      // This would be replaced with a real API call in production
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // Validate inputs
-      if (!email.includes("@") || password.length < 6 || !organization) {
-        throw new Error("Invalid registration data");
-      }
-      
-      // Mock successful registration
-      toast.success("Account created successfully", {
-        description: "Please check your email for verification.",
+      // Sign up with Supabase
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            organization_name: organization
+          }
+        }
       });
       
-      // Redirect to login page
-      navigate("/login");
+      if (error) {
+        throw error;
+      }
+      
+      if (data.user) {
+        // Insert into users table
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert([
+            {
+              id: data.user.id,
+              email: data.user.email,
+              organization_name: organization
+            }
+          ]);
+        
+        if (profileError) {
+          throw profileError;
+        }
+        
+        toast.success("Account created successfully", {
+          description: "Please check your email for verification.",
+        });
+        
+        // Redirect to login page
+        navigate("/login");
+      }
     } catch (error) {
       let message = "Registration failed";
       
@@ -141,18 +186,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = (): void => {
-    // Remove user from localStorage
-    localStorage.removeItem("user");
-    
-    // Update context state
-    setUser(null);
-    
-    // Show toast
-    toast.success("Logged out successfully");
-    
-    // Redirect to login page
-    navigate("/login");
+  const logout = async (): void => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Update context state
+      setUser(null);
+      
+      // Show toast
+      toast.success("Logged out successfully");
+      
+      // Redirect to login page
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Logout failed", {
+        description: "Please try again."
+      });
+    }
   };
 
   return (

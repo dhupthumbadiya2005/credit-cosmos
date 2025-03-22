@@ -1,17 +1,15 @@
 
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "@/lib/toast";
-import { ArrowRight, Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { ArrowRight, Loader2, AlertCircle, CheckCircle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useReportSubmission } from "@/hooks/useReportSubmission";
+import { toast } from "@/lib/toast";
 
 const ReportSubmission: React.FC = () => {
-  const navigate = useNavigate();
   const {
     step,
     setStep,
@@ -20,12 +18,16 @@ const ReportSubmission: React.FC = () => {
     formFields,
     userInputs,
     setUserInputs,
-    apiCalls,
+    reportId,
     isLoading,
     error,
     submitQuery,
-    submitFinalData
+    submitFinalData,
+    uploadPdfs,
+    goToReportAnalysis
   } = useReportSubmission();
+
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const handleQuerySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,13 +57,36 @@ const ReportSubmission: React.FC = () => {
     const success = await submitFinalData();
     if (success) {
       toast.success("Report submitted successfully");
-      navigate("/report-analysis?id=REP-" + Math.floor(Math.random() * 10000));
+      setStep(3);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length > 10) {
+        toast.error("Maximum 10 files allowed");
+        return;
+      }
+      setSelectedFiles(files);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (selectedFiles.length === 0) {
+      toast.error("Please select files to upload");
+      return;
+    }
+    
+    const success = await uploadPdfs(selectedFiles);
+    if (success) {
+      setSelectedFiles([]);
     }
   };
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl md:text-3xl font-bold mb-2">Submit New Report</h1>
+      <h1 className="text-2xl md:text-3xl font-bold mb-2">Analyze New Report</h1>
       <p className="text-muted-foreground mb-6">
         Submit a credit analysis request
       </p>
@@ -197,23 +222,86 @@ const ReportSubmission: React.FC = () => {
         </Card>
       )}
       
-      {/* Step 3: Submission Success */}
+      {/* Step 3: Submission Success & PDF Upload */}
       {step === 3 && (
         <Card className="glass-card">
-          <CardContent className="pt-6">
+          <CardHeader>
+            <CardTitle className="text-xl">Report Submitted Successfully</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="flex flex-col items-center justify-center py-6">
               <div className="mb-4 rounded-full bg-green-100 dark:bg-green-900 p-3">
                 <CheckCircle className="h-10 w-10 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Report Submitted Successfully</h3>
               <p className="text-muted-foreground text-center mb-6">
                 Your analysis request has been submitted and is being processed.
               </p>
+              
+              <div className="w-full p-4 border border-dashed border-border rounded-lg mb-6">
+                <h3 className="text-lg font-medium mb-2">Upload Supporting Documents (Optional)</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  You can upload up to 10 PDF files to support your analysis.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-center w-full">
+                    <label htmlFor="fileUpload" className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-accent/10 hover:bg-accent/20">
+                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                        <Upload className="w-8 h-8 mb-2 text-muted-foreground" />
+                        <p className="mb-1 text-sm text-muted-foreground">
+                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        </p>
+                        <p className="text-xs text-muted-foreground">PDF files only (MAX. 10)</p>
+                      </div>
+                      <Input
+                        id="fileUpload"
+                        type="file"
+                        accept=".pdf"
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  
+                  {selectedFiles.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Selected Files ({selectedFiles.length}/10):</h4>
+                      <div className="max-h-32 overflow-y-auto space-y-1">
+                        {selectedFiles.map((file, index) => (
+                          <div key={index} className="text-xs text-muted-foreground">
+                            {file.name}
+                          </div>
+                        ))}
+                      </div>
+                      <Button 
+                        onClick={handleFileUpload} 
+                        variant="outline"
+                        className="mt-3"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="mr-2 h-4 w-4" />
+                            Upload Files
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
               <Button 
-                onClick={() => navigate("/report-analysis?id=REP-" + Math.floor(Math.random() * 10000))}
-                className="button-hover-effect"
+                onClick={goToReportAnalysis}
+                className="button-hover-effect w-full"
               >
-                View Report <ArrowRight className="ml-2 h-4 w-4" />
+                View Report Analysis <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </CardContent>

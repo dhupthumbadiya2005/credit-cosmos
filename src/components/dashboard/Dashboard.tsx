@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -7,54 +7,138 @@ import {
   Eye,
   Download,
   Trash2,
-  ArrowRight
+  ArrowRight,
+  FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/lib/toast";
+import { supabase } from "@/lib/supabase";
 
-const recentReports = [
-  {
-    id: "REP-1234",
-  },
-  {
-    id: "REP-1235",
-  },
-  {
-    id: "REP-1236",
-  },
-  {
-    id: "REP-1237",
-  },
-];
+interface Report {
+  id: string;
+}
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const [activeStatusTab, setActiveStatusTab] = useState<string>("all");
-  const [filteredReports, setFilteredReports] = useState(recentReports);
+  const [recentReports, setRecentReports] = useState<Report[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchRecentReports();
+    }
+  }, [user]);
+
+  const fetchRecentReports = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('reports')
+        .select('report_id')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(4);
+
+      if (error) {
+        throw error;
+      }
+
+      if (data) {
+        setRecentReports(data.map(report => ({ id: report.report_id })));
+      }
+    } catch (error) {
+      console.error("Error fetching reports:", error);
+      toast.error("Failed to load reports");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleDownload = (reportId: string) => {
     toast.success(`Report ${reportId} downloaded successfully`);
   };
 
-  const handleDeleteReport = (reportId: string) => {
-    setFilteredReports(filteredReports.filter((report) => report.id !== reportId));
-    toast.success("Report deleted successfully");
+  const handleDeleteReport = async (reportId: string) => {
+    try {
+      // Delete from Supabase
+      const { error } = await supabase
+        .from('reports')
+        .delete()
+        .eq('report_id', reportId)
+        .eq('user_id', user?.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // Update local state
+      setRecentReports(recentReports.filter((report) => report.id !== reportId));
+      toast.success("Report deleted successfully");
+    } catch (error) {
+      console.error("Error deleting report:", error);
+      toast.error("Failed to delete report");
+    }
   };
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Welcome, {user?.organization}</h1>
-          <p className="text-muted-foreground">
-            Here's your credit risk analysis overview
+      {/* Welcome Section / Landing Page */}
+      <div className="w-full min-h-[75vh] flex flex-col items-center justify-center text-center px-4 py-12">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">Multi-Bureau Credit Risk Analysis</h1>
+          <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            CrediSphere provides financial institutions with real-time risk insights, 
+            dynamic API integration, and seamless credit assessment.
           </p>
-        </div>
-        <div className="mt-4 md:mt-0">
-          <Button asChild className="button-hover-effect">
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <Card className="glass-card">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <div className="p-3 rounded-full bg-primary/10 mb-4">
+                    <FileText className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">Comprehensive Reports</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Analyze credit data from multiple bureaus in one comprehensive report.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <div className="p-3 rounded-full bg-primary/10 mb-4">
+                    <Upload className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">Dynamic API Integration</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Seamlessly connect with multiple credit bureaus through our API system.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="glass-card">
+              <CardContent className="pt-6">
+                <div className="flex flex-col items-center">
+                  <div className="p-3 rounded-full bg-primary/10 mb-4">
+                    <Eye className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">AI-Powered Insights</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Get intelligent analysis and recommendations based on credit data.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
+          <Button asChild size="lg" className="button-hover-effect px-8 py-6 text-lg">
             <Link to="/report-submission">
-              <Upload className="mr-2 h-4 w-4" /> Submit New Report
+              <Upload className="mr-2 h-5 w-5" /> Analyze New Report
             </Link>
           </Button>
         </div>
@@ -79,14 +163,20 @@ const Dashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredReports.length === 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={2} className="py-4 text-center text-muted-foreground">
+                      Loading reports...
+                    </td>
+                  </tr>
+                ) : recentReports.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="py-4 text-center text-muted-foreground">
                       No reports available
                     </td>
                   </tr>
                 ) : (
-                  filteredReports.map((report) => (
+                  recentReports.map((report) => (
                     <tr
                       key={report.id}
                       className="hover:bg-accent/50 transition-colors"
