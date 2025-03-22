@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
@@ -22,11 +23,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check if user is logged in on component mount
   useEffect(() => {
     const checkUserLoggedIn = async () => {
-      await checkAuth();
-      setIsLoading(false);
+      try {
+        await checkAuth();
+      } catch (error) {
+        console.error("Auth check error:", error);
+      } finally {
+        setIsLoading(false);
+      }
     };
 
     checkUserLoggedIn();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          // User signed in, get their profile
+          const { data } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (data) {
+            setUser({
+              id: data.id,
+              email: data.email,
+              organization_name: data.organization_name
+            });
+          }
+        } else if (event === 'SIGNED_OUT') {
+          // User signed out
+          setUser(null);
+        }
+      }
+    );
+
+    // Cleanup subscription on unmount
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const checkAuth = async (): Promise<boolean> => {
@@ -47,7 +83,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
         
         if (profileError) {
-          throw profileError;
+          console.error("Profile fetch error:", profileError);
+          return false;
         }
         
         if (userData) {
@@ -90,24 +127,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .single();
         
         if (profileError) {
-          throw profileError;
-        }
-        
-        if (userData) {
+          // If profile doesn't exist, create it
+          if (profileError.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from('users')
+              .insert([
+                {
+                  id: data.user.id,
+                  email: data.user.email,
+                  organization_name: organization
+                }
+              ]);
+              
+            if (insertError) {
+              throw insertError;
+            }
+            
+            setUser({
+              id: data.user.id,
+              email: data.user.email!,
+              organization_name: organization
+            });
+          } else {
+            throw profileError;
+          }
+        } else if (userData) {
           setUser({
             id: userData.id,
             email: userData.email,
             organization_name: userData.organization_name
           });
-          
-          // Show success toast
-          toast.success("Login successful", {
-            description: `Welcome back to CrediSphere, ${userData.organization_name}!`,
-          });
-          
-          // Redirect to dashboard
-          navigate("/dashboard");
         }
+        
+        // Show success toast
+        toast.success("Login successful", {
+          description: `Welcome back to CrediSphere, ${organization || userData?.organization_name}!`,
+        });
+        
+        // Redirect to dashboard
+        navigate("/dashboard");
       }
     } catch (error) {
       let message = "Login failed";
