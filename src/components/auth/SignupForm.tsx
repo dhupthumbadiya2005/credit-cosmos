@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -6,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowRight, Mail, Lock, Building, AlertTriangle } from "lucide-react";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
 const SignupForm: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -15,6 +15,7 @@ const SignupForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [signupError, setSignupError] = useState<string | null>(null);
   const { signup } = useAuth();
 
   const validateForm = (): boolean => {
@@ -42,6 +43,7 @@ const SignupForm: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSignupError(null);
     
     if (!validateForm()) {
       return;
@@ -50,9 +52,15 @@ const SignupForm: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+      console.log("Submitting signup form...");
       await signup(email, password, organization);
     } catch (error) {
-      console.error("Signup error:", error);
+      console.error("Signup form error:", error);
+      if (error instanceof Error) {
+        setSignupError(error.message);
+      } else {
+        setSignupError("An unexpected error occurred during signup");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -66,6 +74,14 @@ const SignupForm: React.FC = () => {
           Join CrediSphere to streamline your credit risk analysis
         </p>
       </div>
+      
+      {signupError && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{signupError}</AlertDescription>
+        </Alert>
+      )}
       
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-2">

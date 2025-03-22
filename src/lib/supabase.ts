@@ -1,17 +1,17 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Get Supabase URL and key from environment or use placeholders for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://example.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNvbWVyZWYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYwMDAwMDAwMCwiZXhwIjoxNjAwMDAwMDAwfQ.somevalue';
+// Get Supabase URL and key from environment variables
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co';
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
 
 // Initialize the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Display a warning message if using placeholder credentials
-if (supabaseUrl === 'https://example.supabase.co') {
+if (supabaseUrl === 'https://your-project.supabase.co' || supabaseKey === 'your-anon-key') {
   console.warn(
-    'Using placeholder Supabase credentials. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
+    'Using placeholder Supabase credentials. Please set proper VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.'
   );
 }
 
@@ -62,4 +62,48 @@ export const getCurrentUser = async (): Promise<User | null> => {
     .single();
     
   return data;
+};
+
+// Initialize database schema if needed
+export const initializeDatabase = async () => {
+  try {
+    // Check if users table exists and create it if not
+    const { error: usersError } = await supabase
+      .from('users')
+      .select('id')
+      .limit(1);
+
+    if (usersError && usersError.code === '42P01') { // Table doesn't exist error code
+      console.log('Creating users table...');
+      // Note: Table creation should be done via Supabase dashboard or migrations
+      // This is a fallback mechanism for development
+      await supabase.rpc('create_users_table');
+    }
+
+    // Check if reports table exists and create it if not
+    const { error: reportsError } = await supabase
+      .from('reports')
+      .select('report_id')
+      .limit(1);
+
+    if (reportsError && reportsError.code === '42P01') {
+      console.log('Creating reports table...');
+      await supabase.rpc('create_reports_table');
+    }
+
+    // Check if chat_messages table exists and create it if not
+    const { error: messagesError } = await supabase
+      .from('chat_messages')
+      .select('id')
+      .limit(1);
+
+    if (messagesError && messagesError.code === '42P01') {
+      console.log('Creating chat_messages table...');
+      await supabase.rpc('create_chat_messages_table');
+    }
+    
+    console.log('Database initialization completed');
+  } catch (error) {
+    console.error('Failed to initialize database schema:', error);
+  }
 };

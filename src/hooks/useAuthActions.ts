@@ -15,6 +15,7 @@ export const useAuthActions = (
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
+        console.error("Session error:", error);
         throw error;
       }
       
@@ -28,6 +29,33 @@ export const useAuthActions = (
         
         if (profileError) {
           console.error("Profile fetch error:", profileError);
+          
+          // If profile doesn't exist, create it
+          if (profileError.code === 'PGRST116') {
+            const { error: insertError } = await supabase
+              .from('users')
+              .insert([
+                {
+                  id: data.session.user.id,
+                  email: data.session.user.email,
+                  organization_name: 'My Organization' // Default organization name
+                }
+              ]);
+              
+            if (insertError) {
+              console.error("Profile creation error:", insertError);
+              return false;
+            }
+            
+            setUser({
+              id: data.session.user.id,
+              email: data.session.user.email!,
+              organization_name: 'My Organization'
+            });
+            
+            return true;
+          }
+          
           return false;
         }
         
@@ -59,6 +87,7 @@ export const useAuthActions = (
       });
       
       if (error) {
+        console.error("Login error:", error);
         throw error;
       }
       
@@ -71,6 +100,7 @@ export const useAuthActions = (
           .single();
         
         if (profileError) {
+          console.error("Profile fetch error after login:", profileError);
           // If profile doesn't exist, create it
           if (profileError.code === 'PGRST116') {
             const { error: insertError } = await supabase
@@ -84,6 +114,7 @@ export const useAuthActions = (
               ]);
               
             if (insertError) {
+              console.error("Profile creation error:", insertError);
               throw insertError;
             }
             
@@ -134,6 +165,8 @@ export const useAuthActions = (
     setIsLoading(true);
     
     try {
+      console.log("Signing up user:", email);
+      
       // Sign up with Supabase
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -146,8 +179,11 @@ export const useAuthActions = (
       });
       
       if (error) {
+        console.error("Signup error:", error);
         throw error;
       }
+      
+      console.log("Signup response:", data);
       
       if (data.user) {
         // Insert into users table
@@ -162,6 +198,7 @@ export const useAuthActions = (
           ]);
         
         if (profileError) {
+          console.error("Profile creation error during signup:", profileError);
           throw profileError;
         }
         
@@ -178,6 +215,8 @@ export const useAuthActions = (
       if (error instanceof Error) {
         message = error.message;
       }
+      
+      console.error("Registration error:", error);
       
       toast.error("Registration failed", {
         description: message,
