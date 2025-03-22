@@ -5,7 +5,8 @@ import { AuthContextType } from "@/types/auth";
 import { useAuthState } from "@/hooks/useAuthState";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { setupAuthSubscription } from "@/utils/authSubscription";
-import { initializeDatabase } from "@/lib/supabase";
+import { initializeDatabase, supabase } from "@/lib/supabase";
+import { toast } from "@/lib/toast";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -17,9 +18,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize database schema when the app starts
   useEffect(() => {
-    initializeDatabase().catch(error => {
-      console.error("Database initialization error:", error);
-    });
+    const setupDatabase = async () => {
+      try {
+        console.log("Checking Supabase connection...");
+        // Test Supabase connection first
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Supabase connection error:", error);
+          toast.error("Failed to connect to Supabase", {
+            description: "Please check your Supabase credentials and connection"
+          });
+          return;
+        }
+        
+        console.log("Supabase connection successful, initializing database...");
+        await initializeDatabase();
+      } catch (error) {
+        console.error("Database initialization error:", error);
+        toast.error("Database initialization failed", {
+          description: "Check console for details"
+        });
+      }
+    };
+    
+    setupDatabase();
   }, []);
 
   // Check if user is logged in on component mount

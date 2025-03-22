@@ -67,43 +67,82 @@ export const getCurrentUser = async (): Promise<User | null> => {
 // Initialize database schema if needed
 export const initializeDatabase = async () => {
   try {
-    // Check if users table exists and create it if not
-    const { error: usersError } = await supabase
-      .from('users')
-      .select('id')
-      .limit(1);
+    console.log('Initializing database schema...');
+    
+    // Create users table SQL
+    const createUsersTable = `
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY REFERENCES auth.users(id),
+        email TEXT NOT NULL,
+        organization_name TEXT NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `;
+    
+    // Create reports table SQL
+    const createReportsTable = `
+      CREATE TABLE IF NOT EXISTS reports (
+        report_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        user_id UUID REFERENCES users(id) NOT NULL,
+        initial_context TEXT NOT NULL,
+        text_paragraph_markdown TEXT,
+        other_json_data JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `;
+    
+    // Create chat_messages table SQL
+    const createChatMessagesTable = `
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        report_id UUID REFERENCES reports(report_id) NOT NULL,
+        user_id UUID REFERENCES users(id) NOT NULL,
+        content TEXT NOT NULL,
+        is_user BOOLEAN NOT NULL,
+        timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+    `;
+    
+    // Execute SQL through Supabase functions
+    await supabase.rpc('exec_sql', { sql: createUsersTable }).catch(e => {
+      console.error('Error creating users table:', e);
+      // Fallback: Try to check if the table exists first
+      checkTableExists('users');
+    });
 
-    if (usersError && usersError.code === '42P01') { // Table doesn't exist error code
-      console.log('Creating users table...');
-      // Note: Table creation should be done via Supabase dashboard or migrations
-      // This is a fallback mechanism for development
-      await supabase.rpc('create_users_table');
-    }
+    await supabase.rpc('exec_sql', { sql: createReportsTable }).catch(e => {
+      console.error('Error creating reports table:', e);
+      checkTableExists('reports');
+    });
 
-    // Check if reports table exists and create it if not
-    const { error: reportsError } = await supabase
-      .from('reports')
-      .select('report_id')
-      .limit(1);
-
-    if (reportsError && reportsError.code === '42P01') {
-      console.log('Creating reports table...');
-      await supabase.rpc('create_reports_table');
-    }
-
-    // Check if chat_messages table exists and create it if not
-    const { error: messagesError } = await supabase
-      .from('chat_messages')
-      .select('id')
-      .limit(1);
-
-    if (messagesError && messagesError.code === '42P01') {
-      console.log('Creating chat_messages table...');
-      await supabase.rpc('create_chat_messages_table');
-    }
+    await supabase.rpc('exec_sql', { sql: createChatMessagesTable }).catch(e => {
+      console.error('Error creating chat_messages table:', e);
+      checkTableExists('chat_messages');
+    });
     
     console.log('Database initialization completed');
   } catch (error) {
     console.error('Failed to initialize database schema:', error);
+    console.log('You may need to manually create the tables in Supabase Studio');
+  }
+};
+
+// Helper function to check if a table exists
+const checkTableExists = async (tableName: string) => {
+  try {
+    console.log(`Checking if ${tableName} table exists...`);
+    const { error } = await supabase
+      .from(tableName)
+      .select('count(*)')
+      .limit(1);
+    
+    if (error) {
+      console.error(`Table ${tableName} does not exist or cannot be accessed:`, error);
+      console.log(`You need to manually create the ${tableName} table in Supabase Studio`);
+    } else {
+      console.log(`Table ${tableName} exists and is accessible`);
+    }
+  } catch (e) {
+    console.error(`Error checking ${tableName} table:`, e);
   }
 };
