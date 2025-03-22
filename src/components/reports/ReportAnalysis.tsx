@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from "react";
 import { useLocation, Link } from "react-router-dom";
 import { toast } from "@/lib/toast";
@@ -14,9 +13,6 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/context/AuthContext";
 import Chatbot from "@/components/chatbot/Chatbot";
 import ReactMarkdown from 'react-markdown';
-
-// Add ReactMarkdown dependency
-<lov-add-dependency>react-markdown@latest</lov-add-dependency>
 
 interface ReportData {
   report_id: string;
@@ -122,7 +118,6 @@ const ReportAnalysis: React.FC = () => {
       </div>
       
       <div className="space-y-6 mb-20">
-        {/* Original Query */}
         <Card className="glass-card">
           <CardContent className="p-4">
             <h2 className="text-lg font-semibold mb-2">Original Query</h2>
@@ -130,7 +125,6 @@ const ReportAnalysis: React.FC = () => {
           </CardContent>
         </Card>
         
-        {/* Analysis Results (Markdown) */}
         <Card className="glass-card">
           <CardContent className="p-4">
             <h2 className="text-lg font-semibold mb-4">Analysis Results</h2>
@@ -148,7 +142,6 @@ const ReportAnalysis: React.FC = () => {
           </CardContent>
         </Card>
         
-        {/* Additional Data Section */}
         {report.other_json_data && Object.keys(report.other_json_data).length > 0 && (
           <Card className="glass-card">
             <CardContent className="p-4">
@@ -161,7 +154,6 @@ const ReportAnalysis: React.FC = () => {
         )}
       </div>
       
-      {/* Chatbot Component */}
       <Chatbot reportId={report.report_id} />
     </div>
   );

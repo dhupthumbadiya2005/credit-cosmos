@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/lib/toast";
@@ -9,7 +8,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string, organization: string) => Promise<void>;
   signup: (email: string, password: string, organization: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   checkAuth: () => Promise<boolean>;
 }
 
@@ -186,7 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = async (): void => {
+  const logout = async (): Promise<void> => {
     try {
       // Sign out from Supabase
       await supabase.auth.signOut();
