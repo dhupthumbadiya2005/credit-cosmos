@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -30,14 +29,12 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Redirect to login if not authenticated
   React.useEffect(() => {
     if (!user && !location.pathname.includes("/login") && !location.pathname.includes("/signup")) {
       navigate("/login");
     }
   }, [user, navigate, location.pathname]);
 
-  // Redirect to dashboard if authenticated and on login/signup page
   React.useEffect(() => {
     if (user && (location.pathname === "/login" || location.pathname === "/signup" || location.pathname === "/")) {
       navigate("/dashboard");
@@ -45,7 +42,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [user, navigate, location.pathname]);
 
   if (!user) {
-    // For login and signup pages, only render children without the sidebar
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <div className="flex-1">{children}</div>
@@ -86,7 +82,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-background flex">
-      {/* Desktop Sidebar */}
       <aside
         className={cn(
           "hidden lg:flex flex-col h-screen border-r border-border bg-card fixed transition-all duration-300 z-20",
@@ -145,7 +140,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </aside>
 
-      {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-16 border-b border-border bg-card z-30 flex items-center justify-between px-4">
         <div className="flex items-center">
           <Button
@@ -161,7 +155,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <ThemeToggle />
       </div>
 
-      {/* Mobile Sidebar */}
       {mobileMenuOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div
@@ -185,7 +178,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <p className="text-sm text-foreground/70">Signed in as</p>
                 <p className="text-sm font-medium truncate">{user?.email}</p>
                 <p className="text-xs font-medium text-primary truncate">
-                  {user?.organization}
+                  {user?.organization_name}
                 </p>
               </div>
               <Separator className="my-2" />
@@ -226,7 +219,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       )}
 
-      {/* Main Content */}
       <main
         className={cn(
           "flex-1 transition-all duration-300",
@@ -239,7 +231,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div className="text-sm font-medium text-foreground/70">
               <span className="hidden md:inline-block">{user?.email}</span>
               {" • "}
-              <span className="text-primary">{user?.organization}</span>
+              <span className="text-primary">{user?.organization_name}</span>
             </div>
             <ThemeToggle />
           </div>
